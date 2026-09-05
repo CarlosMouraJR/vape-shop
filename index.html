@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0710">
+<title>Vape Shop — Pods descartáveis</title>
+<meta name="description" content="Ignite, Elfbar, Oxbar, DinnerLady, BlackSheep e Lost Mary. Monte seu carrinho e finalize o pedido no WhatsApp. Venda proibida para menores de 18 anos.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%A8%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ───────────────────────── Portão 18+ ───────────────────────── -->
+<div id="agegate" class="agegate" role="dialog" aria-modal="true" aria-labelledby="agegate-title">
+  <div class="agegate-card">
+    <div class="agegate-badge">18+</div>
+    <h1 id="agegate-title">Conteúdo restrito</h1>
+    <p>A venda de dispositivos com nicotina é <strong>proibida para menores de 18 anos</strong>. Ao entrar você declara ser maior de idade.</p>
+    <div class="agegate-actions">
+      <button id="agegate-yes" class="btn btn-primary">Tenho 18 anos ou mais</button>
+      <a href="https://www.google.com" class="btn btn-ghost" rel="noopener">Sair</a>
+    </div>
+    <p class="agegate-fine">Produto destinado exclusivamente a adultos fumantes. Nicotina causa dependência.</p>
+  </div>
+</div>
+
+<!-- ───────────────────────── Cabeçalho ───────────────────────── -->
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="logo" href="#top">
+      <span class="logo-mark" aria-hidden="true">💨</span>
+      <span class="logo-text">VAPE<span>SHOP</span></span>
+    </a>
+    <div class="header-badges">
+      <span class="mini-badge">✅ Garantia contra defeito inicial</span>
+      <span class="mini-badge">✅ Troca imediata se não funcionar</span>
+    </div>
+    <button id="cart-open" class="cart-btn" aria-label="Abrir carrinho">
+      <span aria-hidden="true">🛒</span>
+      <span class="cart-btn-label">Carrinho</span>
+      <span id="cart-count" class="cart-count" hidden>0</span>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+  <!-- ───────────────────────── Hero ───────────────────────── -->
+  <section class="hero wrap">
+    <p class="hero-kicker">Pods descartáveis · entrega combinada no WhatsApp</p>
+    <h2 class="hero-title">Escolha o sabor.<br><em>Feche no zap.</em></h2>
+    <p class="hero-sub">
+      <strong id="stat-models">21</strong> modelos · <strong id="stat-flavors">115</strong> sabores · 6 marcas.
+      Todos com preço promocional.
+    </p>
+  </section>
+
+  <!-- ───────────────────────── Filtros ───────────────────────── -->
+  <section class="controls wrap" aria-label="Filtros">
+    <div class="search-row">
+      <div class="search-field">
+        <span class="search-icon" aria-hidden="true">🔎</span>
+        <input id="search" type="search" placeholder="Buscar sabor ou modelo… (ex: morango, V400)" autocomplete="off" aria-label="Buscar">
+        <button id="search-clear" class="search-clear" hidden aria-label="Limpar busca">✕</button>
+      </div>
+      <label class="sort-field">
+        <span class="sr-only">Ordenar</span>
+        <select id="sort" aria-label="Ordenar produtos">
+          <option value="destaque">Destaque</option>
+          <option value="menor">Menor preço</option>
+          <option value="maior">Maior preço</option>
+          <option value="puffs">Mais puxadas</option>
+          <option value="desconto">Maior desconto</option>
+        </select>
+      </label>
+    </div>
+    <div id="brand-chips" class="chips" role="group" aria-label="Filtrar por marca"></div>
+  </section>
+
+  <!-- ───────────────────────── Grade ───────────────────────── -->
+  <p id="result-count" class="result-count" aria-live="polite"></p>
+  <section id="grid" class="grid wrap" aria-label="Produtos"></section>
+  <p id="empty" class="empty" hidden>Nada encontrado com esse filtro. <button id="reset-filters" class="linklike">Limpar filtros</button></p>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="foot-warn">🔞 Venda proibida para menores de 18 anos. Nicotina causa dependência.</p>
+    <p class="foot-dim">Preços promocionais sujeitos a alteração e disponibilidade de estoque. O pedido é confirmado por WhatsApp.</p>
+  </div>
+</footer>
+
+<!-- ───────────────────────── Carrinho ───────────────────────── -->
+<div id="backdrop" class="backdrop" hidden></div>
+
+<aside id="cart" class="cart" aria-label="Carrinho" aria-hidden="true">
+  <div class="cart-head">
+    <h2>Seu carrinho</h2>
+    <button id="cart-close" class="icon-btn" aria-label="Fechar carrinho">✕</button>
+  </div>
+  <div id="cart-items" class="cart-items"></div>
+  <div id="cart-empty" class="cart-empty">
+    <span aria-hidden="true">🛒</span>
+    <p>Carrinho vazio.</p>
+    <p class="dim">Escolha um sabor e toque em <strong>Adicionar</strong>.</p>
+  </div>
+  <div class="cart-foot">
+    <div class="cart-savings" id="cart-savings" hidden></div>
+    <div class="cart-total">
+      <span>Total</span>
+      <strong id="cart-total">R$ 0,00</strong>
+    </div>
+    <button id="checkout" class="btn btn-whats" disabled>
+      <span aria-hidden="true">📲</span> Finalizar no WhatsApp
+    </button>
+    <p class="cart-fine">Abre o WhatsApp com o pedido escrito. Você revisa e envia.</p>
+  </div>
+</aside>
+
+<button id="cart-fab" class="cart-fab" hidden aria-label="Abrir carrinho">
+  <span aria-hidden="true">🛒</span>
+  <span id="fab-count" class="fab-count">0</span>
+  <span id="fab-total" class="fab-total">R$ 0,00</span>
+</button>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="catalog.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
