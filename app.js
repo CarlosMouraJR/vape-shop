@@ -4,7 +4,7 @@
 
 const CONFIG = {
   // Número que recebe o pedido, formato internacional só com dígitos.
-  whatsapp: "5551997818204",
+  whatsapp: "5551997371338",
   storeName: "Vape Shop",
 };
 
