@@ -21,6 +21,7 @@
   --radius-sm: 11px;
   --shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
   --wrap: 1240px;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -71,7 +72,10 @@ button { cursor: pointer; }
 
 .agegate {
   position: fixed; inset: 0; z-index: 200;
-  display: grid; place-items: center; padding: 22px;
+  /* safe center + scroll: em tela baixa (paisagem no celular) o card centralizado
+     era cortado em cima, num overflow que não dá pra alcançar. */
+  display: grid; place-items: safe center; padding: 22px;
+  overflow-y: auto;
   background: rgba(5, 3, 9, 0.93);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -260,7 +264,8 @@ button { cursor: pointer; }
   background-repeat: no-repeat;
   background-position: right 14px center;
 }
-#sort option { background: #17102260; color: #F4EEFF; }
+/* Sem alpha: um hex de 8 dígitos aqui deixa o texto do dropdown ilegível. */
+#sort option { background: #171022; color: #F4EEFF; }
 
 .chips { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 14px; }
 .chip {
@@ -383,7 +388,11 @@ button { cursor: pointer; }
   color: #100918;
   border-color: transparent;
   font-weight: 600;
-  background: linear-gradient(120deg, var(--fl-from, #C084FC), var(--fl-to, #7C3AED));
+  /* Véu branco por cima do gradiente do sabor: as pontas escuras (uva, açaí,
+     americano) deixavam o texto preto em 2,9:1 de contraste. */
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .30), rgba(255, 255, 255, .30)),
+    linear-gradient(120deg, var(--fl-from, #C084FC), var(--fl-to, #7C3AED));
 }
 .flavor-em { font-size: 12px; }
 
@@ -462,6 +471,8 @@ button { cursor: pointer; }
 .cart-head h2 { font-family: "Space Grotesk", sans-serif; font-size: 19px; }
 
 .cart-items { flex: 1; overflow-y: auto; padding: 14px 20px; display: grid; gap: 10px; align-content: start; }
+/* display:grid vence o atributo hidden — sem isso a lista vazia continua ocupando a gaveta. */
+.cart-items[hidden] { display: none; }
 
 .cart-empty {
   flex: 1; display: grid; place-content: center; text-align: center; gap: 6px;

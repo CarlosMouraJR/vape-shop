@@ -63,6 +63,17 @@ const GEOM = {
   dual: { x: 22, w: 56, y: 32, h: 134, rx: 17, mw: 22, mh: 16 },
 };
 
+/* "Maçã verde pêssego kiwi" traz três emoji, e três não cabem no selo de 26px do
+   aparelho. O selo mostra o primeiro; o chip do sabor logo abaixo mostra todos. */
+function firstEmoji(s) {
+  const str = s || "💨";
+  if (typeof Intl !== "undefined" && Intl.Segmenter) {
+    const first = new Intl.Segmenter().segment(str)[Symbol.iterator]().next();
+    if (!first.done) return first.value.segment;
+  }
+  return [...str][0] || "💨";
+}
+
 /* O nome da marca é gravado no corpo do aparelho. "BlackSheep" num ultraslim de
    32px não cabe a 9.5px, então a fonte encolhe pra largura disponível em vez de
    cortar o nome. 0.62em é a largura média de um caractere da Space Grotesk. */
@@ -140,7 +151,7 @@ function deviceSVG(product, flavor) {
         letter-spacing="0.3" fill="${bc}">${esc(product.brand.toUpperCase())}</text>
 
   <circle cx="${bodyX + bodyW - 3}" cy="${bodyY + bodyH - 14}" r="13" fill="#140c1f" stroke="${pA.accent}" stroke-width="1.4"/>
-  <text x="${bodyX + bodyW - 3}" y="${bodyY + bodyH - 9}" text-anchor="middle" font-size="13">${flavor.emoji || "💨"}</text>
+  <text x="${bodyX + bodyW - 3}" y="${bodyY + bodyH - 9}" text-anchor="middle" font-size="13">${esc(firstEmoji(flavor.emoji))}</text>
 </svg>`;
 }
 
@@ -166,8 +177,10 @@ const findFlavor = (p, fkey) => p.flavors.find((f) => f.key === fkey) || p.flavo
 
 /* Descarta linhas de carrinho que não existem mais no catálogo (catálogo editado
    depois de o cliente já ter salvo o carrinho). */
-state.cart = state.cart.filter((it) => {
-  const p = findProduct(it.pid);
+/* store.get só cobre a chave ausente: um valor gravado como "null", "{}" ou lixo
+   volta como não-array e .filter estoura antes da página desenhar. */
+state.cart = (Array.isArray(state.cart) ? state.cart : []).filter((it) => {
+  const p = it && findProduct(it.pid);
   return p && p.flavors.some((f) => f.key === it.fkey) && Number.isFinite(it.qty) && it.qty > 0;
 });
 
@@ -175,13 +188,23 @@ state.cart = state.cart.filter((it) => {
 
 const gate = $("#agegate");
 
+/* Esconder visualmente não basta: sem tornar o resto inerte, o Tab atravessa o
+   portão e dá pra montar o carrinho e chegar ao checkout sem declarar a idade. */
+const behindGate = () =>
+  [".site-header", "main", ".site-footer", "#cart", "#backdrop", "#cart-fab", "#toast"]
+    .map((s) => document.querySelector(s))
+    .filter(Boolean);
+
 function openGate() {
   gate.hidden = false;
   document.body.classList.add("locked");
+  behindGate().forEach((el) => { el.inert = true; });
+  $("#agegate-yes").focus();
 }
 function closeGate() {
   gate.hidden = true;
   document.body.classList.remove("locked");
+  behindGate().forEach((el) => { el.inert = false; });
 }
 
 if (store.get(STORAGE.age, false) === true) closeGate();
@@ -225,17 +248,44 @@ function syncChips() {
   });
 }
 
+const terms = (q) => slug(q).split("-").filter(Boolean);
+
+/* Os termos que a marca/modelo não explicam precisam caber TODOS num mesmo sabor.
+   Buscar num campo só juntando todos os sabores faz "morango kiwi" trazer um
+   modelo que tem "Morango ice" e "Kiwi passion" separados — e nenhum dos dois
+   juntos, que é o que a pessoa pediu. */
 function matches(p, q) {
-  if (!q) return true;
-  const hay = slug(`${p.brand} ${p.model} ${p.puffsLabel} ${p.flavors.map((f) => f.name).join(" ")}`);
-  // Toda palavra da busca precisa aparecer — "morango kiwi" não traz só "morango".
-  return slug(q).split("-").filter(Boolean).every((t) => hay.includes(t));
+  const t = terms(q);
+  if (!t.length) return true;
+  const base = slug(`${p.brand} ${p.model} ${p.puffsLabel}`);
+  const rest = t.filter((x) => !base.includes(x));
+  if (!rest.length) return true;
+  return p.flavors.some((f) => {
+    const hay = slug(f.name);
+    return rest.every((x) => hay.includes(x));
+  });
 }
 
+/* Guarda pelos tokens, não pela string crua: buscar "???" tem q truthy mas zero
+   termos, e todo sabor casaria. */
 function flavorMatches(f, q) {
-  if (!q) return false;
+  const t = terms(q);
+  if (!t.length) return false;
   const hay = slug(f.name);
-  return slug(q).split("-").filter(Boolean).every((t) => hay.includes(t));
+  return t.every((x) => hay.includes(x));
+}
+
+/* A busca sugere um sabor uma vez, quando a busca muda. Rodando isso a cada
+   render, reordenar ou filtrar a grade desfaz a escolha feita à mão. */
+let autoQuery = null;
+function autoSelectFromQuery() {
+  if (state.query === autoQuery) return;
+  autoQuery = state.query;
+  if (!state.query) return;
+  CATALOG.forEach((p) => {
+    const hit = p.flavors.find((f) => flavorMatches(f, state.query));
+    if (hit) state.selected[p.id] = hit.key;
+  });
 }
 
 function visibleProducts() {
@@ -257,12 +307,6 @@ function visibleProducts() {
 const grid = $("#grid");
 
 function cardHTML(p) {
-  // Se a busca casa com um sabor específico, já deixa ele escolhido.
-  if (state.query) {
-    const hit = p.flavors.find((f) => flavorMatches(f, state.query));
-    if (hit) state.selected[p.id] = hit.key;
-  }
-
   const f = findFlavor(p, state.selected[p.id]);
   const off = Math.round(((p.priceFrom - p.priceTo) / p.priceFrom) * 100);
   const qty = cartQty(p.id, f.key);
@@ -278,7 +322,7 @@ function cardHTML(p) {
     const on = fl.key === f.key;
     return `<button class="flavor" data-pid="${esc(p.id)}" data-fkey="${esc(fl.key)}"
       aria-pressed="${on}" style="--fl-from:${pal.from};--fl-to:${pal.to}">
-      <span class="flavor-em" aria-hidden="true">${fl.emoji}</span>${esc(fl.name)}
+      <span class="flavor-em" aria-hidden="true">${esc(fl.emoji)}</span>${esc(fl.name)}
     </button>`;
   }).join("");
 
@@ -311,6 +355,7 @@ function cardHTML(p) {
 }
 
 function render() {
+  autoSelectFromQuery();
   const list = visibleProducts();
   grid.innerHTML = list.map(cardHTML).join("");
   $("#empty").hidden = list.length > 0;
@@ -413,6 +458,7 @@ const cartTotals = () =>
 function renderCart() {
   const box = $("#cart-items");
   const { total, full, count } = cartTotals();
+  const scrollY = box.scrollTop; // +/- redesenha a lista toda; sem isso ela pula pro topo
 
   box.innerHTML = state.cart.map((it) => {
     const p = findProduct(it.pid);
@@ -421,7 +467,7 @@ function renderCart() {
       <div class="ci-art">${deviceSVG(p, f)}</div>
       <div class="ci-body">
         <p class="ci-model">${esc(p.brand)} ${esc(p.model)}</p>
-        <p class="ci-flavor">${f.emoji} ${esc(f.name)}</p>
+        <p class="ci-flavor">${esc(f.emoji)} ${esc(f.name)}</p>
         <p class="ci-price">${money(p.priceTo * it.qty)}</p>
       </div>
       <div class="qty">
@@ -431,6 +477,7 @@ function renderCart() {
       </div>
     </div>`;
   }).join("");
+  box.scrollTop = scrollY;
 
   const empty = state.cart.length === 0;
   $("#cart-empty").hidden = !empty;
@@ -509,15 +556,48 @@ function orderText(compact) {
   return lines.join("\n");
 }
 
+const LIMITE_URL = 5800;
+const tamanho = (t) => encodeURIComponent(t).length;
+
+function textoDoPedido() {
+  let text = orderText(false);
+  if (tamanho(text) <= LIMITE_URL) return text;
+
+  // Formato enxuto. Precisa ser reconferido: 30 linhas compactas ainda estouram.
+  text = orderText(true);
+  if (tamanho(text) <= LIMITE_URL) return text;
+
+  // Último recurso: corta a lista mas preserva o total, que é o que não pode mentir.
+  const { total, count } = cartTotals();
+  const linhas = text.split("\n");
+  while (linhas.length > 3 && tamanho(linhas.join("\n")) > LIMITE_URL - 240) linhas.splice(-1);
+  return [
+    ...linhas,
+    "",
+    `… e mais itens — a lista completa não coube na mensagem.`,
+    "————————————————",
+    `Itens: ${count}`,
+    `*Total: ${money(total)}*`,
+    "",
+    "Mando o restante do pedido na sequência 🙏",
+  ].join("\n");
+}
+
 $("#checkout").addEventListener("click", () => {
   if (state.cart.length === 0) return;
 
-  let text = orderText(false);
-  // Pedido muito grande estoura o limite de URL de alguns navegadores — cai no formato enxuto.
-  if (encodeURIComponent(text).length > 5800) text = orderText(true);
+  const url = `https://api.whatsapp.com/send?phone=${CONFIG.whatsapp}&text=${encodeURIComponent(textoDoPedido())}`;
 
-  const url = `https://api.whatsapp.com/send?phone=${CONFIG.whatsapp}&text=${encodeURIComponent(text)}`;
-  window.open(url, "_blank", "noopener");
+  // Clique sintético num <a target="_blank"> em vez de window.open com string de
+  // features: abre como aba normal e sobrevive ao WebView do Instagram/TikTok,
+  // que é de onde vem boa parte do tráfego e que descarta popup.
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 });
 
 /* ─────────────────────── Busca e ordenação ─────────────────────── */
@@ -558,16 +638,19 @@ $("#reset-filters").addEventListener("click", () => {
 
 /* ─────────────────────── Toast ─────────────────────── */
 
-let toastTimer;
+let toastTimer, toastHideTimer;
 function toast(msg) {
   const t = $("#toast");
   t.textContent = `Adicionado: ${msg}`;
   t.hidden = false;
   requestAnimationFrame(() => t.classList.add("show"));
+  // Os dois timers precisam ser cancelados: o de dentro, sozinho, esconde o
+  // toast novo 220ms depois de uma segunda adição rápida.
   clearTimeout(toastTimer);
+  clearTimeout(toastHideTimer);
   toastTimer = setTimeout(() => {
     t.classList.remove("show");
-    setTimeout(() => { t.hidden = true; }, 220);
+    toastHideTimer = setTimeout(() => { t.hidden = true; }, 220);
   }, 1900);
 }
 
