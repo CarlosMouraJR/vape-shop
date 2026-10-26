@@ -366,7 +366,7 @@ function render() {
     : "";
 }
 
-/* Um listener na grade inteira em vez de um por chip — são 115 sabores. */
+/* Um listener na grade inteira em vez de um por chip — são quase 200 sabores. */
 grid.addEventListener("click", (e) => {
   const fl = e.target.closest(".flavor");
   if (fl) {
@@ -658,6 +658,7 @@ function toast(msg) {
 
 $("#stat-models").textContent = CATALOG.length;
 $("#stat-flavors").textContent = CATALOG.reduce((n, p) => n + p.flavors.length, 0);
+$("#stat-brands").textContent = BRANDS.length;
 
 buildChips();
 render();

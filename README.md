@@ -15,7 +15,7 @@ enviar é o cliente. Nada é enviado por trás.
 |---|---|
 | `index.html` | Estrutura da página, portão 18+, gaveta do carrinho |
 | `styles.css` | Tema neon escuro, grade, responsivo |
-| `catalog.js` | Os 21 modelos, 115 sabores, preços e a paleta de cores por sabor |
+| `catalog.js` | Os 23 modelos, 196 sabores, preços e a paleta de cores por sabor |
 | `app.js` | Arte SVG dos aparelhos, filtros, busca, carrinho, checkout |
 
 ## Editar o catálogo
